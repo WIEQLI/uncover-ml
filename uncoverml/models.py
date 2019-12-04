@@ -516,19 +516,20 @@ class RandomForestRegressor(RFR):
 
 
 class RandomForestRegressorMulti():
-
     def __init__(self,
                  outdir='.',
                  forests=10,
                  parallel=True,
                  n_estimators=10,
                  random_state=1,
+                 weighted=False,
                  **kwargs):
         self.forests = forests
         self.n_estimators = n_estimators
         self.parallel = parallel
         self.kwargs = kwargs
         self.random_state = random_state
+        self.weighted = weighted
         self._trained = False
         self._randomforests = {}
 
@@ -549,7 +550,10 @@ class RandomForestRegressorMulti():
             self.kwargs['random_state'] = np.random.randint(0, 10000)
             rf = RandomForestTransformed(
                 n_estimators=self.n_estimators, **self.kwargs)
-            rf.fit(x, y)
+            if self.weighted:
+                rf.fit(x, y, kwargs['fields']['weight'])
+            else:
+                rf.fit(x, y)
             if self.parallel:  # used in training
                 self._randomforests['rf_model_{}'.format(t)] = rf
             else:  # used when parallel is false, i.e., during x-val
@@ -658,7 +662,7 @@ def transform_targets(Regressor):
             self.target_transform.fit(y)
             y_t = self.target_transform.transform(y)
 
-            return super().fit(X, y_t)
+            return super().fit(X, y_t, **kwargs)
 
         def _notransform_predict(self, X, *args, **kwargs):
             Ey = super().predict(X)

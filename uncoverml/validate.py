@@ -381,9 +381,8 @@ def local_crossval(x_all, targets_all, config):
 
         # Train on this fold
         x_train = x_all[train_mask]
-        apply_multiple_masked(model.fit, data=(x_train, y_k_train),
-                              kwargs={'fields': fields_train,
-                                      'lon_lat': lon_lat_train})
+        kwargs={'fields': fields_train, 'lon_lat': lon_lat_train}
+        apply_multiple_masked(model.fit, data=(x_train, y_k_train), **kwargs)
 
         # Testing
         y_k_pred = predict.predict(x_all[test_mask], model,

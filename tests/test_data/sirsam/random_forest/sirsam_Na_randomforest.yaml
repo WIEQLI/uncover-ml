@@ -4,6 +4,7 @@ learning:
     n_estimators: 10
     target_transform: log
     forests: 20
+    weighted: True
 
 # If not loading from pickled data, covariates and targets will be
 # ignored.
@@ -18,7 +19,7 @@ features:
     imputation: mean
 
 targets:
-  file: $UNCOVERML_SRC/tests/test_data/sirsam/targets/geochem_sites_log.shp
+  file: $HOME/sirsam/targets/geochem_weighted.shp
   property: Na_log
 
 # I've renamed preprocessing to 'final_transform' to be better reflect
@@ -63,8 +64,8 @@ output:
 # Will load from pickled data if covariates and targets are present. If any of the files don't
 # exist, covariates and targets will be intersected and data will be dumped to the file specified.
 pickling:
-  covariates: $UNCOVERML_SRC/tests/test_data/sirsam/random_forest/out/features.pk
-  targets: $UNCOVERML_SRC/tests/test_data/sirsam/random_forest/out/targets.pk
+  #covariates: $UNCOVERML_SRC/tests/test_data/sirsam/random_forest/out/features.pk
+  #targets: $UNCOVERML_SRC/tests/test_data/sirsam/random_forest/out/targets.pk
   # When running Cubist or Multicubist, featurevec is also required
   # to load from pickled data.
   #featurevec:

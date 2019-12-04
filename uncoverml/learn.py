@@ -16,13 +16,14 @@ all_modelmaps = {**transformed_modelmaps, **modelmaps, **krig_dict}
 def local_learn_model(x_all, targets_all, config):
 
     model = None
+    kwargs = {'fields': targets_all.fields,
+              'lon_lat': targets_all.positions}
+
     if config.multicubist or config.multirandomforest:
+        kwargs['parallel'] = True
         y = targets_all.observations
         model = all_modelmaps[config.algorithm](**config.algorithm_args)
-        apply_multiple_masked(model.fit, (x_all, y),
-                              kwargs={'fields': targets_all.fields,
-                                      'parallel': True,
-                                      'lon_lat': targets_all.positions})
+        apply_multiple_masked(model.fit, (x_all, y), **kwargs)
         if config.multirandomforest:
             rf_dicts = model._randomforests
             rf_dicts = mpiops.comm.gather(rf_dicts, root=0)
@@ -34,9 +35,7 @@ def local_learn_model(x_all, targets_all, config):
         if mpiops.chunk_index == 0:
             y = targets_all.observations
             model = all_modelmaps[config.algorithm](**config.algorithm_args)
-            apply_multiple_masked(model.fit, (x_all, y),
-                                  kwargs={'fields': targets_all.fields,
-                                          'lon_lat': targets_all.positions})
+            apply_multiple_masked(model.fit, (x_all, y), **kwargs)
 
     # Save transformed targets for diagnostics
     if mpiops.chunk_index == 0 and hasattr(model, 'target_transform'):
