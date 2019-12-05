@@ -183,11 +183,16 @@ def load_shapefile(filename, targetfield, covariate_crs):
     records = np.array(sf.records()).T
     record_dict = {k: np.array(r, dtype=d) for k, r, d in zip(
         shapefields, records, dtypes)}
+
     if targetfield in record_dict:
         val = record_dict.pop(targetfield)
     else:
         raise ValueError("Can't find target property in shapefile." +
                          "Candidates: {}".format(record_dict.keys()))
+
+    if 'weight' in record_dict: 
+        record_dict['weight'] = np.nan_to_num(record_dict['weight'], nan=1.0)
+
     othervals = record_dict
 
     # Try to get CRS.
