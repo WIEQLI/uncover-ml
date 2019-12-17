@@ -577,6 +577,7 @@ class Config(object):
         self.metadata_file = _outpath('_metadata.txt')
         self.optimisation_results_file = _outpath('_optimisation.csv')
         self.prediction_file = _outpath('_{}.tif')
+        self.pca_file = _outpath('_pca_{}.tif')
         
         paths = [self.output_dir, os.path.split(self.model_file)[0]]
         for p in paths:

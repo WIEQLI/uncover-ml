@@ -343,9 +343,8 @@ def get_image_crs(config):
     im = image.Image(RasterioImageSource(image_file))
     return im.crs 
      
-def get_image_spec(model, config):
+def get_image_spec(config, nchannels=1):
     # temp workaround, we should have an image spec to check against
-    nchannels = len(model.get_predict_tags())
     imagelike = config.feature_sets[0].files[0]
     template_image = image.Image(RasterioImageSource(imagelike))
     eff_shape = template_image.patched_shape(config.patchsize) + (nchannels,)
@@ -358,7 +357,7 @@ class ImageWriter:
 
     nodata_value = np.array(-1e20, dtype='float32')
 
-    def __init__(self, shape, bbox, crs, name, n_subchunks, outpath,
+    def __init__(self, shape, bbox, crs, n_subchunks, outpath, outbands,
                  band_tags=None, independent=False, **kwargs):
         """
         pass in additional geotif write options in kwargs
@@ -368,9 +367,13 @@ class ImageWriter:
                                          bbox[0, 1], bbox[1, 1],
                                          shape[0], shape[1])
         self.shape = shape
-        self.outbands = len(band_tags)
+        self.outbands = outbands
+        self.band_tags = [str(k) for k in range(self.outbands)] \
+                          if band_tags is None else band_tags
+        if len(self.band_tags) != self.outbands:
+            raise ValueError(f"Mismatch between number of band tags ({self.band_tags}) and "
+                              "number of outbands ({self.outbands}). Must be equal.")
         self.bbox = bbox
-        self.name = name
         self.outpath = outpath
         self.n_subchunks = n_subchunks
         self.independent = independent  # mpi control
@@ -424,6 +427,8 @@ class ImageWriter:
         :return:
         """
         x = x.astype(np.float32)
+        print(x.shape)
+        print(self.shape)
         rows = self.shape[0]
         bands = x.shape[1]
 

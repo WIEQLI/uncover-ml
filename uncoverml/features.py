@@ -93,8 +93,10 @@ def transform_features(feature_sets, transform_sets, final_transform, config):
     if config.cubist or config.multicubist or config.krige:
         log.warning("{}: Ignoring preprocessing final transform".format(config.algorithm))
     else:
+        print(f"x shape before whiten: {x.shape}")
         if final_transform:
             x = final_transform(x)
+            print(f"x shape post whiten: {x.shape}")
     return x, cull_all_null_rows(feature_sets)
 
 

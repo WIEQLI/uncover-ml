@@ -51,6 +51,49 @@ def run_crossval(x_all, targets_all, config):
 @click.argument('config_file')
 @click.option('-p', '--partitions', type=int, default=1,
               help='divide each node\'s data into this many partitions')
+def pca(config_file, partitions):
+    config = ls.config.Config(config_file)
+    print(config.final_transform)
+    _logger.info("'whiten' not found in 'final_transform'. Adding 'whiten' "
+                 "transform so PCA can be computed.")
+    if config.crop_box:
+        ls.geoio.crop_covariates(config)
+
+    config.n_subchunks = partitions
+    if config.n_subchunks > 1:
+        _logger.info("Memory constraint forcing {} iterations "
+                     "through data".format(config.n_subchunks))
+    else:
+        _logger.info("Using memory aggressively: "
+                     "dividing all data between nodes")
+
+    targets = ls.geoio.load_targets(shapefile=config.target_file,
+                                    targetfield=config.target_property,
+                                    covariate_crs=ls.geoio.get_image_crs(config),
+                                    crop_box=config.crop_box)
+
+    # Get the image chunks and their associated transforms
+    image_chunk_sets = ls.geoio.image_feature_sets(targets, config)
+    transform_sets = [k.transform_set for k in config.feature_sets]
+    features, keep = ls.features.transform_features(image_chunk_sets,
+                                                    transform_sets,
+                                                    config.final_transform,
+                                                    config)
+
+    x_all = ls.features.gather_features(features[keep], node=0)
+    shape, bbox, crs = ls.geoio.get_image_spec(config)
+    print("Image spec:")
+    print(shape, bbox, crs)
+    image_out = ls.geoio.ImageWriter(shape, bbox, crs, config.n_subchunks, config.pca_file,
+                                     outbands=x_all.shape[1])
+    for i in range(config.n_subchunks):
+        image_out.write(x_all, i)
+    
+    
+@cli.command()
+@click.argument('config_file')
+@click.option('-p', '--partitions', type=int, default=1,
+              help='divide each node\'s data into this many partitions')
 def learn(config_file, partitions):
     config = ls.config.Config(config_file)
     targets_all, x_all = _load_data(config, partitions)
@@ -240,16 +283,16 @@ def predict(config_file, partitions, mask, retain):
     else:
         _logger.info("Using memory aggressively: dividing all data between nodes")
 
-    image_shape, image_bbox, image_crs = ls.geoio.get_image_spec(model, config)
+    image_shape, image_bbox, image_crs = ls.geoio.get_image_spec(config, 
+                                            nchannels=len(model.get_predict_tags()))
 
-    outfile_tif = config.name + "_" + config.algorithm
     predict_tags = model.get_predict_tags()
     if not config.outbands:
         config.outbands = len(predict_tags)
 
     image_out = ls.geoio.ImageWriter(image_shape, image_bbox, image_crs,
-                                     outfile_tif,
                                      config.n_subchunks, config.prediction_file,
+                                     min(len(predict_tags), config.outbands),
                                      band_tags=predict_tags[0: min(len(predict_tags), 
                                                                    config.outbands)],
                                      **config.geotif_options)
