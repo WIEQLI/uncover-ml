@@ -39,6 +39,11 @@ _global_transforms = {'centre': transforms.CentreTransform,
                       'sqrt': transforms.SqrtTransform,
                       'whiten': transforms.WhitenTransform}
 
+def sp(path):
+    if path is None:
+        return None
+    else:
+        return os.path.abspath(os.path.expanduser(path))
     
 
 def _parse_transform_set(transform_dict: dict, imputer_string: str, n_images: int=None) -> tuple:
@@ -391,7 +396,7 @@ class Config(object):
             self.oversample_factor = _grp(cb, 'oversample_factor',
                                           "'oversample_factor' must be provided when clustering.")
             self.cluster_analysis = cb.get('cluster_analysis', False)
-            self.class_file = cb.get('file')
+            self.class_file = sp(cb.get('file'))
             if self.class_file:
                 self.class_property = _grp(cb, 'property', "'property' must be provided when "
                                            "providing a file for semisupervised clustering.")
@@ -437,15 +442,15 @@ class Config(object):
         # PICKLING BLOCK
         pk_block = s.get('pickling')
         if pk_block:
-            self.pk_covariates = pk_block.get('covariates')
-            self.pk_targets = pk_block.get('targets')
+            self.pk_covariates = sp(pk_block.get('covariates'))
+            self.pk_targets = sp(pk_block.get('targets'))
 
             # Load from pickle files if covariates and targets exist.
             self.pk_load = self.pk_covariates and os.path.exists(self.pk_covariates) \
                            and self.pk_targets and os.path.exists(self.pk_targets)
             
             if self.cubist or self.multicubist:
-                self.pk_featurevec = pk_block.get('featurevec')
+                self.pk_featurevec = sp(pk_block.get('featurevec'))
                 # If running multicubist, we also need featurevec to load from pickle files.
                 self.pk_load = self.pk_load \
                                and self.pk_featurevec and os.path.exists(self.pk_featurevec)
@@ -473,11 +478,11 @@ class Config(object):
         if not self.pk_load and not self.clustering:
             tb = _grp(s, 'targets', "'targets' block must be provided when not loading from "
                       "pickled data.")
-            self.target_file = _grp(tb, 'file', "'file' needs to be provided when specifying "
-                                    "targets.")
+            self.target_file = sp(_grp(tb, 'file', "'file' needs to be provided when specifying "
+                                       "targets."))
             self.target_property = _grp(tb, 'property', "'property needs to be provided when "
                                         "specifying targets.")
-            self.shiftmap_targets = tb.get('shiftmap')
+            self.shiftmap_targets = sp(tb.get('shiftmap'))
             rb = tb.get('resample')
             if rb:
                 self.spatial_resampling_args = rb.get('spatial')
@@ -538,7 +543,7 @@ class Config(object):
         self.thumbnails = pb.get('thumbnails', 10)
         mb = s.get('mask')
         if mb:
-            self.mask = mb.get('file') 
+            self.mask = sp(mb.get('file'))
             self.mask = None if not os.path.exists(self.mask) else self.mask
             if self.mask:
                 self.retain = _grp(mb, 'retain', "'retain' must be provided if providing a "
@@ -548,18 +553,18 @@ class Config(object):
         
         if self.krige:
             # Todo: don't know if lon/lat is compulsory or not for kriging
-            self.lon_lat = s.get('lon_lat')
+            self.lon_lat = sp(s.get('lon_lat'))
         else:
             self.lon_lat = None
 
 
         # OUTPUT BLOCK
         def _outpath(filename):
-            return os.path.join(self.output_dir, self.name + f'{filename}')
+            return sp(os.path.join(self.output_dir, self.name + f'{filename}'))
 
         ob = _grp(s, 'output', "'output' block is required.")
-        self.output_dir = _grp(ob, 'directory', "'directory' for output is required.")
-        self.model_file = ob.get('model', _outpath('.model'))
+        self.output_dir = sp(_grp(ob, 'directory', "'directory' for output is required."))
+        self.model_file = sp(ob.get('model', _outpath('.model')))
 
         if ob.get('plot_feature_ranks', False):
             self.plot_feature_ranks = _outpath('_featureranks.png')
